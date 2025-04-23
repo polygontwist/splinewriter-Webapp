@@ -1,0 +1,540 @@
+/*@charset "UTF-8";*/
+body{
+	background-color:#ddd;
+	margin:0;
+	padding:0;
+	width:100%;
+	height:100%;
+	line-height: 1.5em;
+}
+
+body *{
+	box-sizing: border-box;
+	font-family: Verdana,sans-serif;
+	font-size:12pt;
+}
+
+
+
+#myapplication{
+	width:100%;
+	height:100%;
+	overflow:hidden;
+	position: absolute;
+	/*background-color:#fff;*/
+}
+
+
+/*
+	| zeichenfeld | werkzeuge |
+
+*/
+
+#status{
+	position:absolute;
+	display:flex;
+	flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+	left:0;
+	bottom:0;
+	right:0;
+	height:25px;
+	padding:0px 5px;
+	font-size:10pt;
+	background-color:#6e6e6e;
+	color:#d5d2d2;
+	-webkit-box-shadow: inset 0px 5px 9px 0px rgba(0,0,0,0.2); 
+	box-shadow: inset 0px 5px 9px 0px rgba(0,0,0,0.2);
+}
+#statL{}
+#statM{}
+#statR{}
+
+#zeichenfeld{ 
+	position:absolute;
+	left:0;
+	top:0;
+	right:10px;
+	bottom:25px;
+	background-color:#717171;
+	overflow:auto;
+}
+
+#canHG{
+	background-color:#ffffff;
+}
+
+
+#canVorlage{
+	
+	background-image:url("");
+	background-position:center;
+	background-repeat:no-repeat;
+	background-size: contain;
+}
+
+#canHG,#canVorlage,#canLines,#canDraw,#canZeichnung{
+	position:absolute;
+}
+#canDraw{
+	cursor:crosshair;
+}
+
+#ladebalken,#lbfill
+{
+	position:absolute;
+	left:0;
+	top:0;
+	width:100%;
+	height:5px;
+	opacity:1;
+}
+#lbfill{
+	width:0%;
+	background-color:#75cc4a;
+}
+#ladebalken{
+	transition: opacity 0.25s linear 0s;
+	-webkit-transition: opacity 0.25s linear 0s;
+}
+#ladebalken.off{
+	opacity:0;
+}
+
+#werkzeuge{
+	background-color:#dddddd;
+	position:absolute;
+	width:320px;
+	top:0;
+	right:-290px;
+	bottom:25px;
+	transition: right 0.25s linear 0s;
+	-webkit-transition: right 0.25s linear 0s;
+}
+#werkzeuge *{
+	vertical-align: top;
+}
+
+input[type="text"]:disabled{
+	background-color: transparent;
+    border: 0;
+    color: #000;
+}
+
+
+#werkzeuge input:invalid{
+	outline:2px solid red;
+}
+
+.werkzeugeoffen #zeichenfeld{
+	right:320px;
+}
+.werkzeugeoffen #werkzeuge{
+	right:0px;
+	overflow: auto;
+}
+
+#werkzeuge .ocbutt{/*openclose-bar*/
+	position:fixed;
+	width:10px;
+	bottom:25px;
+	top:0;
+	line-height:20px;
+	background-color:#aaaaaa;
+	outline:0;
+	cursor:w-resize;
+}
+#werkzeuge .ocbutt:after{
+	content: "";
+    width: 2px;
+    height: 28px;
+    border: 2px solid #737373;
+    border-bottom: 0px;
+    border-top: 0px;
+    position: absolute;
+    left: 2px;
+    top: calc(50% - 14px);
+}
+
+#werkzeuge article{
+	border-top:1px solid #eaeaea;
+	margin-left: 10px;	/*openclose !*/
+   /* margin-bottom: 5px;*/
+    padding: 10px
+}
+#werkzeuge article div{
+	margin-bottom:2px;
+}
+#werkzeuge h1{
+	font-size:12pt;
+	margin:0;
+	font-weight:normal;
+	top: -10px;
+    position: relative;
+    background-color: #eaeaea;
+    text-align: center;
+}
+#werkzeuge h1:before,#werkzeuge h1:after{
+	content:"";
+	position:absolute;
+	top:0;
+	width:10px;
+	height:24px;
+	background-color: #eaeaea;
+	display:block;
+}
+#werkzeuge h1:before{
+	left:-10px;
+}
+#werkzeuge h1:after{
+	right:-10px;
+}
+
+#werkzeuge input[type="number"]{
+	width: 70px;
+    text-align: right;
+    padding: 0;
+}
+
+#werkzeuge label.labeltext{
+	margin-right:2px;
+	min-width: 107px;
+	display: inline-block;
+}
+
+#werkzeuge .einheit{
+	margin-left:2px;
+}
+
+
+#werkzeuge button.minibutt
+{
+	width:50%;
+}
+
+.butt,#werkzeuge button
+{
+	width: 100%;
+	margin-bottom: 5px;
+	cursor: pointer;
+	color:#000000;
+	background-color:#e1e1e1;
+	border:1px solid #adadad;
+	display:inline-block;
+	text-align:center;
+	padding: 2px 0;
+	line-height:20px;
+	border-radius: 5px;
+}
+
+.butt:hover,#werkzeuge button:hover
+{
+	color:#000000;
+	background-color:#e5f1fb;
+	border:1px solid #0078d7;
+}
+/*disabled*/
+#werkzeuge button:disabled
+{
+	cursor:default;
+	color:#a2a2a2;
+}
+
+#werkzeuge button:hover
+{
+	background-color:#e1e1e1;
+	border:1px solid #adadad;
+}
+
+.inputdateilabel{
+}
+.inputdatei{
+	position:absolute;
+	right:0px;
+	opacity:0;
+	top:-10px;
+}
+
+.verschieber{
+	height:92px;
+	position:relative;
+	margin-bottom:10px;
+	
+}
+.moveL,.moveR,.moveT,.moveD{
+	position:absolute;
+	color:transparent;
+	
+}
+#werkzeuge button.movebutt{
+	width:25%;
+}
+.moveL:after,.moveR:after,.moveT:after,.moveD:after{
+	content:"";
+	position:absolute;
+	left:calc(50% - 3px);
+	top:calc(50% - 7px);
+	width:0;
+	height:0;
+	border: 7px solid transparent;
+}
+
+#werkzeuge button.moveL{
+	left:3%;
+	top:30px;
+    color:transparent;
+}
+.moveL:after{
+	 border-right-color: #000;	
+}
+
+#werkzeuge button.moveR{
+	right:3%;
+	top:30px;
+}
+.moveR:after{
+	 border-left-color: #000;	
+}
+
+#werkzeuge button.moveT{
+	top:0;
+	left:calc(50% - 12.5%)
+}
+.moveT:after{
+	 border-bottom-color: #000;	
+	 top: calc(50% - 11px);
+}
+#werkzeuge button.moveD{
+	bottom:0;
+	left:calc(50% - 12.5%);
+}
+.moveD:after{
+	border-top-color: #000;
+	top: calc(50% - 3px);	
+}
+.moveL:disabled:after,
+.moveR:disabled:after,
+.moveT:disabled:after,
+.moveD:disabled:after
+{
+	opacity:0.25;
+}
+
+.movestepps{
+	position:absolute;
+	left:93px;	
+	top:31px;
+}
+.movestepps input{
+	width:60px !important;
+}
+
+#dialog{
+	width:100%;
+	height:100%;
+	background-color:rgba(0,0,0,0.6);
+	position:absolute;
+	left:0;
+	top:0;
+}
+#dialogtitel{
+	width:calc(100% - 10px);
+	height:25px;
+	top:5px;
+	left:5px;
+	
+	font-size:12pt;
+	margin:0;
+	font-weight:normal;
+	position: absolute;
+    background-color: #eaeaea;
+    text-align: center;
+}
+#dialogtitelbutt{
+	position:absolute;
+	top:5px;
+	right:10px;	
+	height:20px;
+	line-height: 20px;
+}
+#dialogtitelbutt a{
+	display:inline-block;
+	width: 20px;
+	height:20px;
+	text-decoration:none;
+	text-align:center;
+	font-weight:bold;
+	font-size:12px;
+	position:relative;
+	margin-left:5px;
+}
+
+.closebutton{
+	background-color:#ffffff;
+	color:#000;
+	-webkit-border-radius:10px;
+	-moz-border-radius:10px;
+	border-radius:10px;
+}
+
+#dialogcontent{
+	position: absolute;
+    width:calc(100% - 10px);
+	top:30px;
+	left:5px;
+	bottom:5px;
+	background-color:#dddddd;
+	overflow: auto;
+}
+#dialogcontent article{
+	padding: 10px;
+}
+
+#dialogcontent .input2 .labeltext{
+	min-width: 50%;
+    display: inline-block;
+}
+
+#dialogcontent .input2 div{
+	margin-bottom:5px;
+}
+
+.unsichtbar{
+	display:none;
+}
+	
+#vorlagenwahl{
+	width:100%;
+	min-height:30px;
+	max-height:100px;
+	overflow:auto;
+	padding: 10px;
+	background-color: #cacaca;
+}
+#vorlagenwahl ul{
+	margin:0;
+	padding:0;
+}
+#vorlagenwahl ul li{
+	list-style-type: none;
+	padding:5px;
+	margin:0;
+	background-color:rgba(0,0,0,0.02);
+}
+
+#vorlagenwahl ul li:nth-child(even) {
+	background-color:rgba(255,255,255,0.1);
+}
+
+
+#vorlagenwahl ul li button
+{
+	float:right;
+	margin-left:5px;
+	cursor: pointer;
+}
+
+.vorlageninputs{
+	padding:10px;
+}
+.gcodinputtabelle{
+	width:100%;
+}
+.gcodinputtabelle div{
+	display:table-row;
+}
+
+.gcodinputtabelle label,.gcodinputtabelle textarea{
+	display: table-cell;
+	vertical-align: top;
+}
+.gcodinputtabelle label{
+	width:30%;
+}
+.gcodinputtabelle textarea{
+	width:100%;
+	min-height:90px;
+}
+
+.booleanswitch{
+	display:none;/**/
+}
+input.booleanswitch ~ label{
+	cursor:pointer;
+	display:inline-block;
+	width:50px;
+	height:25px;
+	-webkit-border-radius:33px;
+	-moz-border-radius:33px;
+	border-radius:33px;
+	border:2px solid #666;
+	position:relative;
+	box-sizing: border-box;
+	/*margin-right: 53px; Bereich für Beschriftung*/
+}
+input.booleanswitch ~ label:before{
+	content:"";
+	-webkit-border-radius:33px;
+	-moz-border-radius:33px;
+	border-radius:33px;
+	background-color:#D17777;
+	width:19px;
+	height:19px;
+	display:inline-block;
+	position:absolute;
+	left:0;
+	top:1px;
+	box-sizing: border-box;
+	transition: all 0.25s linear 0s;
+	-webkit-transition: all 0.25s linear 0s;
+}
+input.booleanswitch:checked ~ label:before{
+	left:27px;
+	background-color:#77CE75;
+}
+ 
+ p{
+	 padding:0;
+	 margin:0;
+ }
+
+
+#ebenenset{}
+#ebenenset ul{
+	margin:0;
+	padding:0;
+	margin-bottom:10px;
+}
+#ebenenset ul li{
+	list-style-type: none;
+	padding-top:5px;
+}
+.colorpicker{
+	width:50px;
+	height:23px;
+	display:inline-block;
+}
+#ebenenset ul li .colorpicker{
+	margin-left:10px;
+}
+#ebenenset ul li button{
+	width:auto;
+	margin-left:10px;
+	padding:0 2px;
+}
+ 
+ .inlineblock{
+	 display:inline-block;
+ }
+ .abstandRL{
+	 margin-left:5px;
+	 margin-right:5px;
+ }
+ 
+ 
+ 
+/* responsive */
+@media screen and (max-width: 650px) {
+	
+}
