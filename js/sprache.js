@@ -87,7 +87,7 @@ var sprachen=[
 		"text_importeinstellungen":"Je höher der Wert, um so mehr Zwischenpunkte werden erzeugt."
 		
 		,"neuenAlgorythmus":"SVG import neuer Algorithmus benutzen"
-		,"text_neuenAlgorythmus":"Neuer Alsorithmus macht weniger Punkte, ist genauer aber verschluck u.U. gebogene Teile."
+		,"text_neuenAlgorythmus":"Neuer Algorithmus macht weniger Punkte, ist genauer aber verschluck u.U. gebogene Teile."
 		
 		,"Dateitypunbekannt":"Dateityp unbekannt (nur .gcode, .nc, .svg, .ai)"
 		
