@@ -46,7 +46,10 @@ optionen.json
 
 
 var splinewriter=function(){
-	var progversion="Version 0.3.7";
+	var progversion="Version 0.3.8";
+	
+	var useparsePathdefault=true;//generell 
+	var useparsePath=useparsePathdefault;//stellt sich bei Fehlern um und versucht svg neu zu parsen
 	
 	var Programmeinstellungen={//als Einstellungen gespeichert
 		sprache:"DE",
@@ -123,6 +126,8 @@ var splinewriter=function(){
 			"grobabweichung":80,	//°Winkel	
 			"weitemm":10,			//verschiebe um mm
 			
+			"scalestepp":9,
+			
 			"showgrid":true,
 			
 			"blatt":{"width":100,"height":100,"zoom":1}
@@ -132,6 +137,7 @@ var splinewriter=function(){
 		},
 		importoptionen:{
 			"genauigkeit":100
+			,"neuenAlgorythmus":true
 		}
 	};
 	
@@ -465,6 +471,7 @@ var splinewriter=function(){
 		}
 			
 		var cangeInputloadgcode=function(e){
+			useparsePath=useparsePathdefault;
 			var inputFile=this;
 			var reader = new FileReader();
 			//window.File && window.FileReader && window.FileList && window.Blob
@@ -595,7 +602,7 @@ var splinewriter=function(){
 			//input=cE(gruppe,"select");
 			inpBeispiele=new inputElement('beispiele','select',gruppe);
 			inpBeispiele.addListe(beispielliste);
-			console.log(inpBeispiele);
+			//console.log(inpBeispiele);
 			
 			inpBeispiele.addEventFunc( function(v){ loadBeispiel(v);} );
 			
@@ -724,8 +731,21 @@ var splinewriter=function(){
 			//gruppe=cE(werkznode,"article");
 			//Zeichnung actions: 
 			node=cE(gruppe,"p");
-			node.innerHTML=getWort("scale")+":";
-			translatetElements.push({id:"scale",a:":",n:node});
+			span=cE(node,"span");
+			span.innerHTML=getWort("scale")+":";
+			translatetElements.push({id:"scale",a:":",n:span});
+			
+			inpbutt=new inputElement(undefined,'number',node,'Factor');
+			inpbutt.addEventFunc( function(v){
+					var vv=parseFloat(v);
+					if(vv<0.1)vv=0.1;
+					Programmeinstellungen.drawoptions.scalestepp=vv;
+					console.log("set scale",vv);
+				} );
+			inpbutt.setClass("scalemul");
+			inpbutt.setMinMaxStp(0.1,9.9,0.1);
+			inpbutt.setVal(Programmeinstellungen.drawoptions.scalestepp);//9
+			
 			
 			inpbutt=new inputElement('scaleless','button',gruppe);
 			inpbutt.addEventFunc( function(v){if(zeichenfeld)zeichenfeld.scale("-");} );
@@ -735,7 +755,10 @@ var splinewriter=function(){
 			inpbutt.addEventFunc( function(v){if(zeichenfeld)zeichenfeld.scale("+");} );
 			inpbutt.setClass("minibutt scaleP");
 			
-			//TODO: rotate +-90°
+			
+			//----
+			
+			//TODO: rotate +-90°; spiegeln
 			
 			//Anzeige größe
 			node=new InfoNodeElement(gruppe);
@@ -771,6 +794,9 @@ var splinewriter=function(){
 			
 			inpbutt=new inputElement('exportsvg','button',gruppe);
 			inpbutt.addEventFunc( function(v){if(zeichenfeld)zeichenfeld.exportgcode('svg');} );
+			
+			inpbutt=new inputElement('exporteps','button',gruppe);
+			inpbutt.addEventFunc( function(v){if(zeichenfeld)zeichenfeld.exportgcode('eps');} );
 			
 			addClass(zielNode,"werkzeugeoffen");
 			refreshInputElemente();
@@ -902,6 +928,13 @@ var splinewriter=function(){
 			dateiname=window.prompt(getWort('inputfilename'),"dateiname."+exporttyp);
 			if(dateiname===null)return;
 			
+			
+			
+			if(exporttyp=="eps"){
+				data=getDataAsEPS();
+				download(dateiname,data);				
+			}
+			else
 			if(exporttyp=="svg"){
 				data=getDataAsSVG();
 				download(dateiname,data);				
@@ -1085,8 +1118,6 @@ var splinewriter=function(){
 				data+="</g>\n";				
 			}
 			
-			
-			
 			//create header
 			var headdata="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 			headdata+="<!-- Generator: SplineWriter "+progversion+" -->\n";
@@ -1098,10 +1129,75 @@ var splinewriter=function(){
 			headdata+=(maxY*yMul)+"\" enable-background=\"new 0 0 ";
 			headdata+=(maxX*xMul)+" ";
 			headdata+=(maxY*yMul)+"\" xml:space=\"preserve\">\n";
-						
-			
+
 			data+="\n</svg>";			
 			return headdata+data;
+		}
+		
+		var getDataAsEPS=function(){
+			var headdata="",eps="";
+			var enr,lz;
+			var maxX=0,maxY=0,minX=0,minY=0,linie,p,pz,hh;
+			
+			for(enr=0;enr<ebenenset.length;enr++){
+				for(lz=0;lz<zeichnung.length;lz++){
+					linie=zeichnung[lz];//Line
+					if(linie[0]["level"]==enr){
+						for (let i = 0; i < linie.length; i++) {
+							p=linie[i];//Point
+							if(p.x>maxX)maxX=p.x;
+							if(p.y>maxY)maxY=p.y;
+							if(p.x<minX || (lz==0 && i==0))minX=p.x;
+							if(p.y<minY || (lz==0 && i==0))minY=p.y;
+						}
+					}
+				}
+			}
+			hh=maxY-minY;
+		
+			for(enr=0;enr<ebenenset.length;enr++){
+				for(lz=0;lz<zeichnung.length;lz++){
+					linie=zeichnung[lz];//Line
+					if(linie[0]["level"]==enr){
+						
+						eps += `newpath\n`;
+						
+						p=linie[0];						
+						eps += rundeauf(p.x,4)+' '+rundeauf((-p.y+minY*2+hh),4);//flip Y
+						eps += ` moveto\n`;
+						
+						for (let i = 1; i < linie.length; i++) {
+							p=linie[i];	
+							eps += rundeauf(p.x,4)+' '+rundeauf((-p.y+minY*2+hh),4);//flip Y
+							eps += ` lineto\n`;
+						}
+						eps += `stroke\n`;
+					}
+				}
+			}
+			eps += `showpage`;
+			
+			headdata+="%!PS-Adobe-3.0 EPSF-3.0"+"\n";
+			headdata+="%%Creator: splinewriter "+progversion+"\n";
+			
+			const now = new Date();
+			headdata+="%%CreationDate: "+ now.toString()+"\n";
+			headdata+="%%Pages: 1"+"\n";
+			headdata+="%%LanguageLevel: 2"+"\n";
+			headdata+="%%BoundingBox: "+minX+" "+minY+" "+maxX+" "+maxY+"\n";
+			headdata+="%%EndComments"+"\n";
+			headdata+="%%BeginProlog"+"\n";
+			headdata+="%%EndProlog"+"\n";
+			headdata+="%%BeginSetup"+"\n";
+			headdata+="%%EndSetup"+"\n";
+			headdata+="%%Page: 1 1"+"\n";
+			headdata+="%%BeginPageSetup"+"\n";
+			headdata+="%%PageBoundingBox: "+minX+" "+minY+" "+maxX+" "+maxY+"\n";
+			headdata+="%%EndPageSetup"+"\n";
+			//headdata+=""+"\n";
+			
+			
+			return headdata+eps;
 		}
 		
 		this.importgcodesvg=function(filename,data){
@@ -1164,9 +1260,13 @@ var splinewriter=function(){
 			var stepx=0;
 			var stepy=0;
 			var scalefactor=1;
+			//var scalestepp=9;
+			var scalestepp=Programmeinstellungen.drawoptions.scalestepp;
+			if(scalestepp<0.1)scalestepp=0.1;
+			if(scalestepp>9.9)scalestepp=9.9;
 			
-			if(pm=="+")scalefactor=1/90*100;//110%
-			if(pm=="-")scalefactor=0.9;//90%
+			if(pm=="+")scalefactor=1/(scalestepp*10)*100;//111.111%
+			if(pm=="-")scalefactor=scalestepp/10;//0.9 90%
 			
 			if(!modifizierealles){
 				liste=[];
@@ -2101,6 +2201,120 @@ var splinewriter=function(){
 			return ebenenset[ebenaktiv]["color"];			
 		}
 		
+		//-------parsePath=ki-generated-------
+
+		function parsePath(d, bezierSteps = 10) {
+		  const commands = d.match(/[a-zA-Z][^a-zA-Z]*/g);
+		  const points = [];
+		  let currentPoint = { x: 0, y: 0 };
+		  let startPoint = null;
+
+		  function lerp(a, b, t) {
+			return a + (b - a) * t;
+		  }
+
+		  function cubicBezier(p0, p1, p2, p3, t) {
+			const x =
+			  Math.pow(1 - t, 3) * p0.x +
+			  3 * Math.pow(1 - t, 2) * t * p1.x +
+			  3 * (1 - t) * t * t * p2.x +
+			  t * t * t * p3.x;
+			const y =
+			  Math.pow(1 - t, 3) * p0.y +
+			  3 * Math.pow(1 - t, 2) * t * p1.y +
+			  3 * (1 - t) * t * t * p2.y +
+			  t * t * t * p3.y;
+			return { x, y };
+		  }
+
+		  function quadraticBezier(p0, p1, p2, t) {
+			const x =
+			  Math.pow(1 - t, 2) * p0.x +
+			  2 * (1 - t) * t * p1.x +
+			  t * t * p2.x;
+			const y =
+			  Math.pow(1 - t, 2) * p0.y +
+			  2 * (1 - t) * t * p1.y +
+			  t * t * p2.y;
+			return { x, y };
+		  }
+
+		  for (const cmd of commands) {
+			const type = cmd[0];
+			
+			//"L9,-9 9,9-9,9"
+			//berücksichtigt ob Leerzeichen oder - als Zahlentrenner
+			const coords = [...cmd.slice(1).matchAll(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)].map(match => Number(match[0]));
+
+
+			let i = 0;
+			switch (type) {
+			  case 'M':
+			  case 'L':
+				while (i < coords.length) {
+				  const point = { x: coords[i++], y: coords[i++] };
+				  points.push(point);					if( Number.isNaN(point.y) )console.log('L',point,i,coords,cmd);
+				  currentPoint = point;				
+				  if (!startPoint) startPoint = point;
+				}
+				break;
+			  case 'H':
+				while (i < coords.length) {
+				  const x = coords[i++];
+				  const point = { x, y: currentPoint.y };
+				  points.push(point);					//if( Number.isNaN(point.y) )console.log('H',point);
+				  currentPoint = point;
+				}
+				break;
+			  case 'V':
+				while (i < coords.length) {
+				  const y = coords[i++];
+				  const point = { x: currentPoint.x, y };
+				  points.push(point);					//if( Number.isNaN(point.y) )console.log('V',point);
+				  currentPoint = point;
+				}
+				break;
+			  case 'C':
+				while (i + 5 < coords.length) {
+				  const p1 = { x: coords[i++], y: coords[i++] };
+				  const p2 = { x: coords[i++], y: coords[i++] };
+				  const p3 = { x: coords[i++], y: coords[i++] };
+				  for (let t = 0; t <= 1; t += 1 / bezierSteps) {
+					const pt = cubicBezier(currentPoint, p1, p2, p3, t);
+					points.push(pt);					//if( Number.isNaN(pt.y) )console.log('C',pt);
+				  }
+				  currentPoint = p3;
+				}
+				break;
+			  case 'Q':
+				while (i + 3 < coords.length) {
+				  const p1 = { x: coords[i++], y: coords[i++] };
+				  const p2 = { x: coords[i++], y: coords[i++] };
+				  for (let t = 0; t <= 1; t += 1 / bezierSteps) {
+					const pt = quadraticBezier(currentPoint, p1, p2, t);
+					points.push(pt);					//if( Number.isNaN(pt.y) )console.log('C',pt);
+				  }
+				  currentPoint = p2;
+				}
+				break;
+			  case 'Z':
+			  case 'z':
+				if (startPoint) {
+				  points.push({ ...startPoint });
+				  currentPoint = { ...startPoint };
+				}
+				break;
+			  // Erweiterbar für 'S', 'T', 'A', etc.
+			  default:
+				console.warn('Nicht unterstützter Befehl:', type);
+			}
+		  }
+
+		  return points;
+		}
+
+		
+		//--------------
 		var loadSVG=function(fileName,daten){
 			
 			if(zeichnung.length>0)
@@ -2211,7 +2425,8 @@ var splinewriter=function(){
 			
 			var sarr=info.getAttribute("viewBox").split(' ');
 			
-			var dbox={"x":sarr[0],"y":sarr[1],"width":sarr[2],"height":sarr[3]};
+			var dbox={"x":parseFloat(sarr[0]),"y":parseFloat(sarr[1])
+					,"width":parseFloat(sarr[2]),"height":parseFloat(sarr[3])};
 			
 			if(!confirm(getWort("scaletoblatt"))){
 				//Blatt scalieren
@@ -2248,10 +2463,13 @@ var splinewriter=function(){
 				xmax=dbox.width;
 				ymax=dbox.height;
 			}
-			console.log("scalieren",scalieren);
+			console.log("scalieren",scalieren,dbox);
 			
 			var calcfunnr=-1;
 			var schleifenz=0;
+			var transform={x:0,y:0};
+			var calccounter=0;
+			var calccounterhops=32;//nur alle ... Linien eine MS für screen-update warten
 			
 			var LinesToPolypaht=function(SVGdoc){
 				var re=[],i,newNode, x1,y1,x2,y2;
@@ -2282,14 +2500,19 @@ var splinewriter=function(){
 			
 			var calcpfade=function(){
 					var ez,gefunden=false,linecolor="";
+					var Dlininen=[];
 				
 					if(calcytimer!=undefined)clearTimeout(calcytimer);
 					var point,attr,ip,liste,node,strp,newnode,x,y,w,h,points;
+					//var erster=true;
+					
 					if(calcfunnr==-1){//get pfade/polyline
 						//Linien zu polyline
 						LinesToPolypaht(svgdoc);
 						
-						pfade=svgdoc.getElementsByTagName('path');
+						pfade=svgdoc.getElementsByTagName('path');//console.log("pfade",pfade);
+						
+						
 						polyline=[];
 						liste=svgdoc.getElementsByTagName('polyline');
 						for(ip=0;ip<liste.length;ip++){
@@ -2345,29 +2568,109 @@ var splinewriter=function(){
 					}
 					
 					if(calcfunnr==0){//get min/max								
-								
+						//ymin=0;
+						//ymax=0;
+						
 						i=schleifenz;
 						
 						if(i<pfade.length){
 							//<path>
 							pfad=pfade[i];//.getAttribute('d')
 
+							attr=pfad.getAttribute("transform");
+							if(attr!=null){
+								//console.log(attr,pfad);
+								
+								const match = attr.match(/matrix\(([^)]+)\)/);
+								if (match) {
+								  const values = match[1].split(',').map(parseFloat);
+
+								  // Matrix(a, b, c, d, e, f) -> e = x, f = y
+								  if (values.length === 6) {		//console.log("T>",values[4],values[5]);
+									transform.x =parseFloat(values[4]);
+									transform.y =parseFloat(values[5]);
+								  }
+								}									
+							}
+
+
 							if(typeof pfad.getTotalLength !=="undefined"){
 								pl=pfad.getTotalLength();									
 								//console.log("pflength",pl);
-								for(t=0;t<pl;t++){
-									point=pfad.getPointAtLength(t);
-									xmin=Math.min(point.x,xmin);
-									ymin=Math.min(point.y,ymin);
-									xmax=Math.max(point.x,xmax);
-									ymax=Math.max(point.y,ymax);
+								
+								
+								attr=pfad.getAttribute("d");
+								Dlininen=[];										
+								if(attr!=null)
+								if(attr!="" && useparsePath)
+									Dlininen=parsePath(attr,10);
+								
+								if(Dlininen.length>0){
+									//console.log('>neu>');
+									for(t=0;t<Dlininen.length;t++){
+										point=Dlininen[t];
+										
+										if(point.y!=undefined){										
+											xmin=Math.min(point.x+transform.x,xmin);
+											xmax=Math.max(point.x+transform.x,xmax);											
+											
+											ymin=Math.min(point.y+transform.y,ymin);
+											ymax=Math.max(point.y+transform.y,ymax);
+										}
+										
+										if(
+											Number.isNaN(xmin) ||
+											Number.isNaN(xmax) ||
+											Number.isNaN(ymin) ||
+											Number.isNaN(ymax) 
+										){
+											console.log("Fehler",point);//y:NaN|undefined
+										}
+										
+										
+									}
+									
+									if(
+										Number.isNaN(xmin) ||
+										Number.isNaN(xmax) ||
+										Number.isNaN(ymin) ||
+										Number.isNaN(ymax) 
+									){
+										
+										useparsePath=false;										
+										calcfunnr=-1;
+										schleifenz=0;
+										transform={x:0,y:0};
+										if(scalieren===false){
+											xmin=0;
+											ymin=0;
+											xmax=dbox.width;
+											ymax=dbox.height;
+										}
+										calccounter=0;
+										console.log("Fehler wechsel Importmodus useparsePath=false");
+										
+										calcpfade();
+										return;
+									}
+									
 								}
+								else{
+								
+									for(t=0;t<pl;t++){
+										point=pfad.getPointAtLength(t);
+										xmin=Math.min(point.x+transform.x,xmin);
+										ymin=Math.min(point.y+transform.y,ymin);
+										xmax=Math.max(point.x+transform.x,xmax);
+										ymax=Math.max(point.y+transform.y,ymax);
+									}
+								}
+								
 							}else{
 								console.log("#>",pfad);
 							}
 						}
-						else{
-							//<polyline>
+						else{//<polyline>
 							pfad=polyline[i-pfade.length];
 							attr=pfad.getAttribute('points');
 							
@@ -2429,35 +2732,81 @@ var splinewriter=function(){
 								//path
 								pfad=pfade[i];//.getAttribute('d')
 								
+								attr=pfad.getAttribute("transform");
+								if(attr!=null){
+									//console.log(attr,pfad);
+									
+									const match = attr.match(/matrix\(([^)]+)\)/);
+									if (match) {
+									  const values = match[1].split(',').map(parseFloat);
+
+									  // Matrix(a, b, c, d, e, f) -> e = x, f = y
+									  if (values.length === 6) {//console.log("T>",values);
+										transform.x = values[4];
+										transform.y = values[5];
+									  }
+									}									
+								}
+								
 								if(typeof pfad.getTotalLength !=="undefined"){
 									pl=pfad.getTotalLength();
 									if(pl>0){
-										//console.log('length',pl,pfad);
-										strichepunkte=[];
-										setLadebalken(50+50/pfade.length*i);								
-										//for(t=0;t<pl;t+=0.5)
-										for(t=0;t<pl;t++)
-										{
-											point=pfad.getPointAtLength(t);
-											strichepunkte.push({
-												x:(point.x-xmin)*pxtommMul,//mm
-												y:(point.y-ymin)*pxtommMul, 
-												px:(point.x-xmin)*mulScaleDraw,//pixel
-												py:(point.y-ymin)*mulScaleDraw,
-												level:ebenaktiv
-												})
-										}
-										point=pfad.getPointAtLength(pl-0.01);
-										strichepunkte.push({
-												x:(point.x-xmin)*pxtommMul,
-												y:(point.y-ymin)*pxtommMul, 
-												px:(point.x-xmin)*mulScaleDraw,
-												py:(point.y-ymin)*mulScaleDraw,
-												level:ebenaktiv
-												})
+										//console.log('pfad',transform,pfad);
+										attr=pfad.getAttribute("d");
 										
-										//console.log(strichepunkte);
-										createLinie(true);//zeichnet px/py,optimiert auf x/y aus strichepunkte
+										Dlininen=[];										
+										if(attr!=null)
+										if(attr!="" && useparsePath)
+											Dlininen=parsePath(attr,5);
+										
+										strichepunkte=[];
+										setLadebalken(50+50/pfade.length*i);	
+//Dlininen=[];											
+										if(Dlininen.length>0){
+											//console.log('>neu>');
+											for(t=0;t<Dlininen.length;t++){
+												point=Dlininen[t];
+												if(point.y!=undefined){
+													strichepunkte.push({
+														x:(point.x-xmin +transform.x)*pxtommMul,//mm
+														y:(point.y-ymin +transform.y)*pxtommMul, 
+														px:(point.x-xmin+transform.x)*mulScaleDraw,//pixel
+														py:(point.y-ymin+transform.y)*mulScaleDraw,
+														level:ebenaktiv
+														})
+												}
+											}
+											createLinie(false);
+										}
+										else{
+											//console.log('>alt>');										
+											for(t=0;t<pl;t++)
+											{
+												point=pfad.getPointAtLength(t);
+												strichepunkte.push({
+													x:(point.x-xmin +transform.x)*pxtommMul,//mm
+													y:(point.y-ymin +transform.y)*pxtommMul, 
+													px:(point.x-xmin+transform.x)*mulScaleDraw,//pixel
+													py:(point.y-ymin+transform.y)*mulScaleDraw,
+													level:ebenaktiv
+													})
+											}
+											point=pfad.getPointAtLength(pl-0.01);
+											strichepunkte.push({
+													x:(point.x-xmin+transform.x)*pxtommMul,
+													y:(point.y-ymin+transform.y)*pxtommMul, 
+													px:(point.x-xmin+transform.x)*mulScaleDraw,
+													py:(point.y-ymin+transform.y)*mulScaleDraw,
+													level:ebenaktiv
+													})
+											
+											//console.log(strichepunkte);
+											createLinie(true);//zeichnet px/py,optimiert auf x/y aus strichepunkte	
+										}
+										
+
+										
+										
 									}
 								}
 							}
@@ -2536,7 +2885,14 @@ var splinewriter=function(){
 					}
 					
 					if(calcfunnr<4){
-						calcytimer=setTimeout(calcpfade,1);
+						calccounter++;
+						if(calccounter<calccounterhops){
+							calcpfade();
+						}
+						else{//update 
+							calccounter=0;
+							calcytimer=setTimeout(calcpfade,1);
+						}	
 					}
 			}
 			
@@ -2833,6 +3189,8 @@ var splinewriter=function(){
 				inp.getName()==getWort('exportgcode')
 				||
 				inp.getName()==getWort('exportsvg')
+				||
+				inp.getName()==getWort('exporteps')
 			){
 				inp.inaktiv(zeichenfeld.getLineCount()==0);
 			}
@@ -3591,7 +3949,7 @@ var splinewriter=function(){
 	}
 
 	var dialogImport=function(zielnode){
-		var input_genauigkeit;
+		var input_genauigkeit,inputVariante;
 		
 		var changegenauigkeit=function(v){
 			var val=parseFloat(v.node.getVal());
@@ -3623,6 +3981,20 @@ var splinewriter=function(){
 			gruppe=cE(zielnode,"article");
 			node=cE(gruppe,"p");
 			node.innerHTML=getWort("text_importeinstellungen");
+			
+			gruppe=cE(zielnode,"article",undefined,"importoption");
+			
+			inputVariante=new inputElement(getWort('neuenAlgorythmus'),'checkbox',gruppe);
+			console.log(useparsePathdefault);
+			inputVariante.setVal(useparsePathdefault);
+			inputVariante.addEventFunc(function(inp){ 
+						console.log("change to ",inputVariante.getVal())
+						useparsePathdefault=inputVariante.getVal();
+						useparsePath=useparsePathdefault;
+					} );
+					
+			node=cE(gruppe,"p");
+			node.innerHTML=getWort("text_neuenAlgorythmus");
 			
 		}
 		

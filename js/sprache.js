@@ -48,6 +48,7 @@ var sprachen=[
 		"speichern":"Speicheroptionen",
 		"exportgcode":"download als gcode",
 		"exportsvg":"download als svg",
+		"exporteps":"download als eps",
 		"inputfilename":"Wie soll die Datei heißen?",
 		
 		"notcorrectfile":"Diese Datei kann ich nicht lesen :-/",
@@ -84,6 +85,9 @@ var sprachen=[
 		
 		"titel_importeinstellungen":"Importoptionen",
 		"text_importeinstellungen":"Je höher der Wert, um so mehr Zwischenpunkte werden erzeugt."
+		
+		,"neuenAlgorythmus":"SVG import neuer Algorithmus benutzen"
+		,"text_neuenAlgorythmus":"Neuer Alsorithmus macht weniger Punkte, ist genauer aber verschluck u.U. gebogene Teile."
 		
 		,"Dateitypunbekannt":"Dateityp unbekannt (nur .gcode, .nc, .svg, .ai)"
 		
@@ -138,6 +142,7 @@ var sprachen=[
 		"speichern":"saving options",
 		"exportgcode":"download as gcode",
 		"exportsvg":"download as svg",
+		"exporteps":"download as eps",
 		"inputfilename":"What should the file be named?",
 		
 		"notcorrectfile":"I can not read this file :-/",
@@ -180,6 +185,9 @@ var sprachen=[
 		
 		"titel_importeinstellungen":"import options",
 		"text_importeinstellungen":"The higher the value, the more intermediate points are created."
+
+		,"neuenAlgorythmus":"Use SVG import new algorithm"
+		,"text_neuenAlgorythmus":"New algorithm makes fewer points, is more accurate but may swallow up curved parts."
 
 		,"Dateitypunbekannt":"File type unknown (only .gcode, .nc, .svg, .ai)"
 		,"zeichnungloeschen":"Delete old drawing?"

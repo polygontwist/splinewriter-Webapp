@@ -532,7 +532,10 @@ input.booleanswitch:checked ~ label:before{
 	 margin-right:5px;
  }
  
- 
+ .scalemul{
+	 display:inline-block;
+	 padding-left:5px;
+ }
  
 /* responsive */
 @media screen and (max-width: 650px) {
